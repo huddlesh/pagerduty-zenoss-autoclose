@@ -1,49 +1,38 @@
-# coding=utf-8
 import json
-import urllib
-import urllib2
+import requests
 from optparse import OptionParser
-import pprint
 from config import zenoss_location, zenoss_user, zenoss_password
 
-class getEvents():
-    def __init__(self, debug=False):
+class Zenoss():
 
-        # Use the HTTPCookieProcessor as urllib2 does not save cookies by default
-        self.urlOpener = urllib2.build_opener(urllib2.HTTPCookieProcessor())
-        if debug: self.urlOpener.add_handler(urllib2.HTTPHandler(debuglevel=1))
+    def __init__(self):
+
+        # Create session so we pass our auth cookie along and stay logged in
+        self.session = requests.Session()
         self.reqCount = 1
 
-        # Contruct POST params and submit login.
-        loginParams = urllib.urlencode(dict(
-                        __ac_name = zenoss_user,
-                        __ac_password = zenoss_password,
-                        submitted = 'true',
-                        came_from = zenoss_location + '/zport/dmd'))
-        self.urlOpener.open(zenoss_location + '/zport/acl_users/cookieAuthHelper/login',
-                            loginParams)
+        url = zenoss_location + '/zport/acl_users/cookieAuthHelper/login'
+        payload = {'__ac_name': zenoss_user,
+                   '__ac_password': zenoss_password,
+                   'submitted': True,
+                   'came_from': zenoss_location + '/zport/dmd'}
 
-    def _request(self, method, data=[]):
+        resp = self.session.post(url, data=payload)
 
-        # Contruct a standard URL request for API calls
-        req = urllib2.Request(zenoss_location + '/zport/dmd/evconsole_router')
+    def request(self, data=[]):
 
-        # Set Content-type to 'application/json' for this request
-        req.add_header('Content-type', 'application/json; charset=utf-8')
+        url = zenoss_location + '/zport/dmd/evconsole_router'
+        headers = {'content-type': 'application/json; charset=utf-8'}
+        payload = {'action': 'EventsRouter',
+                   'method': 'query',
+                   'data': data,
+                   'type': 'rpc',
+                   'tid': self.reqCount}
 
-        # Convert the request parameters into JSON
-        reqData = json.dumps([dict(
-                    action='EventsRouter',
-                    method=method,
-                    data=data,
-                    type='rpc',
-                    tid=self.reqCount)])
-
-        # Increment the request count ('tid'). More important if sending multiple calls in a single request
         self.reqCount += 1
+        resp = self.session.post(url, data=json.dumps(payload), headers=headers)
 
-        # Submit the request and convert the returned JSON to objects
-        return json.loads(self.urlOpener.open(req, reqData).read())
+        return resp.json()
 
     def get_events(self, filter={}, sort='severity', dir='DESC'):
 
@@ -57,9 +46,10 @@ class getEvents():
                         'message', 'DeviceClass', 'Location', 'Systems', 'device']
         data['params'] = filter
 
-        return self._request('query', [data])['result']
+        return self.request([data])['result']
 
-if __name__ == "__main__":
+def main():
+
     usage = 'python %prog --severity=severity --eventState=eventState  --lastTime=lastTime --firstTime=firstTime --stateChange=stateChange --sort=lastTime --dir=DESC'
 
     parser = OptionParser(usage)
@@ -72,7 +62,7 @@ if __name__ == "__main__":
     parser.add_option("--dir", dest='dir', default='DESC', help='the direction to sort the results --dir=\'ASC\' or --dir=\'DESC\'')
     (options, args) = parser.parse_args()
 
-    # options is an object ­ we want the dictionary value of it
+    # options is an object we want the dictionary value of it
     # Some of the options need a little munging...
     option_dict = vars(options)
     if option_dict['severity']:
@@ -98,13 +88,10 @@ if __name__ == "__main__":
     if not s in sortlist:
         s='lastTime'
 
-    events = getEvents()
-    pp = pprint.PrettyPrinter(indent=4)
-
-    out = events.get_events(filter=option_dict, sort=s, dir=d)
+    zenoss = Zenoss()
+    out = zenoss.get_events(filter=option_dict, sort=s, dir=d)
 
     for e in out['events']:
-        pp.pprint(e)
         outState=e['eventState']
         if e['DeviceClass']:
            outDeviceClass=e['DeviceClass'][0]['name']
@@ -125,3 +112,6 @@ if __name__ == "__main__":
         print '%s,%s,%s,%s,%s,%s,%s,%s,%s,%s' % (outState, outDeviceClass, outcount, outdevice,
                                                  outLocation, outSystems, outseverity, outfirstTime,
                                                  outlastTime, outsummary)
+
+if __name__ == "__main__":
+    main()
