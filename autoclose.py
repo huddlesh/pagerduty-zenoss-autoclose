@@ -1,7 +1,7 @@
 import json
 import requests
 from optparse import OptionParser
-from config import zenoss_location, zenoss_user, zenoss_password
+from config import zenoss_location, zenoss_user, zenoss_password, pagerduty_domain, pagerduty_service, pagerduty_token
 
 class Zenoss():
 
@@ -19,12 +19,12 @@ class Zenoss():
 
         resp = self.session.post(url, data=payload)
 
-    def request(self, data=[]):
+    def _request(self, method, data=[]):
 
         url = zenoss_location + '/zport/dmd/evconsole_router'
         headers = {'content-type': 'application/json; charset=utf-8'}
         payload = {'action': 'EventsRouter',
-                   'method': 'query',
+                   'method': method,
                    'data': data,
                    'type': 'rpc',
                    'tid': self.reqCount}
@@ -33,6 +33,12 @@ class Zenoss():
         resp = self.session.post(url, data=json.dumps(payload), headers=headers)
 
         return resp.json()
+
+    def close_events(self, filter={}):
+
+        ids = dict()
+
+        return self._request('close', [ids])['result']
 
     def get_events(self, filter={}, sort='severity', dir='DESC'):
 
@@ -45,7 +51,23 @@ class Zenoss():
                         'firstTime', 'lastTime', 'evid', 'device']
         data['params'] = filter
 
-        return self.request([data])['result']
+        return self._request('query', [data])['result']
+
+class Pagerduty():
+
+    def get_events(self):
+        url = 'https://' + pagerduty_domain + '.pagerduty.com/api/v1/incidents'
+        payload = {'fields': 'incident_key',
+                   'status': 'resolved',
+                   'limit': '10',
+                   'service': pagerduty_service,
+                   'sort_by': 'resolved_on:desc'}
+
+        headers = {'content-type': 'application/json',
+                   'Authorization': 'Token token=' + pagerduty_token}
+
+        r = requests.get(url, data=json.dumps(payload), headers=headers);
+        return r.json()
 
 def main():
 
@@ -76,16 +98,18 @@ def main():
     zenoss = Zenoss()
     z = zenoss.get_events(filter=option_dict, sort=sort_key, dir=sort_direction)
 
+    pagerduty = Pagerduty()
+    p = pagerduty.get_events()
+
+    # Show me my Zenoss events
+    print 'Zenoss'
     for e in z['events']:
-        outEvid = e['evid']
-        outState=e['eventState']
-        outdevice=e['device']['text']
-        outseverity=e['severity']
-        outfirstTime=e['firstTime']
-        outlastTime=e['lastTime']
-        print 'Evid: %s ,State: %s, Device: %s, Severity: %s, firstTime: %s, lastTime: %s' % (outEvid, outState, outdevice,
-                                           outseverity, outfirstTime,
-                                           outlastTime)
+        print 'Evid = %s, State = %s' % (e['evid'],e['eventState'])
+
+    # Show me my Pagerduty events
+    print 'Pagerduty:'
+    for i in p['incidents']:
+        print 'incident_key = %s' % (i['incident_key'])
 
 if __name__ == "__main__":
     main()
