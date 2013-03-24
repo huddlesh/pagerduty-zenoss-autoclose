@@ -40,16 +40,20 @@ class Zenoss():
 
         return self._request('close', [ids])['result']
 
-    def get_events(self, filter={}, sort='severity', dir='DESC'):
+    def get_events(self):
 
-        data = dict(start=0, limit=20)
-        if sort: data['sort'] = sort
-        if dir: data['dir'] = dir
+        # Defaults we may want to allow to be modified at some point
+        data = dict(start=0,
+                    limit=20,
+                    sort='lastTime',
+                    dir='DESC')
+
+        data['params'] = { 'severity': ['5', '4'],
+                           'eventState': ['0','1']}
 
         # Cheasy way to fix broken Zenoss 4 json implementation
         data['keys'] = ['eventState', 'severity', 'component',
                         'firstTime', 'lastTime', 'evid', 'device']
-        data['params'] = filter
 
         return self._request('query', [data])['result']
 
@@ -71,32 +75,9 @@ class Pagerduty():
 
 def main():
 
-    usage = 'python %prog --severity=severity --eventState=eventState  --lastTime=lastTime --firstTime=firstTime --stateChange=stateChange --sort=lastTime --dir=DESC'
-
-    parser = OptionParser(usage)
-    parser.add_option("--severity", dest='severity', help='severity comma-separated numeric values eg. --severity=5,4 for Critical and Error')
-    parser.add_option("--eventState", dest='eventState', default='0,1', help='eventState comma-separated numberic values eg. --eventState=0,1 for New and Ack')
-    parser.add_option("--lastTime", dest='lastTime', help='the last time an event was seen. A range that has a start & end in format --lastTime=\'2013-09-13 09:23:21/2012-/2013-09-14 09:23:21/2012\'')
-    parser.add_option("--firstTime", dest='firstTime', help='the first time the event was seen --firstTime=\'2013-09-13 09:23:21\'')
-    parser.add_option("--stateChange", dest='stateChange', help='when the event last changed state --stateChange=\'2013-09-13 09:23:21\'')
-    parser.add_option("--sort", dest='sort', default='lastTime', help='key to sort on --sort=\'lastTime\'')
-    parser.add_option("--dir", dest='dir', default='DESC', help='the direction to sort the results --dir=\'ASC\' or --dir=\'DESC\'')
-    (options, args) = parser.parse_args()
-
-    # Option is an object but we need dictionary values
-    option_dict = vars(options)
-    if option_dict['severity']:
-        option_dict['severity'] = option_dict['severity'].split(',')
-    if option_dict['eventState']:
-        option_dict['eventState'] = option_dict['eventState'].split(',')
-
-    # Present by default, sort and dir need removed as they are not a part of the filter string.
-    sort_key = option_dict.pop('sort')
-    sort_direction = option_dict.pop('dir')
-
     # Create a new zenoss object and fetch its events
     zenoss = Zenoss()
-    z = zenoss.get_events(filter=option_dict, sort=sort_key, dir=sort_direction)
+    z = zenoss.get_events()
 
     pagerduty = Pagerduty()
     p = pagerduty.get_events()
