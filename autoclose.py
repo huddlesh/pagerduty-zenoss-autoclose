@@ -108,8 +108,9 @@ def main():
 
     # If we have any matches someone has resoloved the event(s)
     # in pagerduty so lets close them in zenoss
-    if not evids:
+    if evids:
         zenoss.close_events(list(evids))
+
 
 if __name__ == "__main__":
     main()
