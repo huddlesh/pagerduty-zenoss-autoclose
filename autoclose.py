@@ -34,7 +34,7 @@ class Zenoss():
 
         return resp.json()
 
-    def close_events(self, filter={}):
+    def close_events(self, Evids={}):
 
         ids = dict()
 
@@ -48,18 +48,23 @@ class Zenoss():
                     sort='lastTime',
                     dir='DESC')
 
+        # These query params give us severity of critical and error,
+        # a state of New or Ack, and a prodState of Production
         data['params'] = { 'severity': ['5', '4'],
-                           'eventState': ['0','1']}
+                           'eventState': ['0','1'],
+                           'prodState': '1000'}
 
         # Cheasy way to fix broken Zenoss 4 json implementation
         data['keys'] = ['eventState', 'severity', 'component',
-                        'firstTime', 'lastTime', 'evid', 'device']
+                        'firstTime', 'lastTime', 'evid', 'device',
+                        'prodState']
 
         return self._request('query', [data])['result']
 
 class Pagerduty():
 
     def get_events(self):
+
         url = 'https://' + pagerduty_domain + '.pagerduty.com/api/v1/incidents'
         payload = {'fields': 'incident_key',
                    'status': 'resolved',
@@ -84,8 +89,9 @@ def main():
 
     # Show me my Zenoss events
     print 'Zenoss'
+    print z['events']
     for e in z['events']:
-        print 'Evid = %s, State = %s' % (e['evid'],e['eventState'])
+        print 'Evid = %s, Event State = %s, Device State: %s' % (e['evid'], e['eventState'], e['prodState'])
 
     # Show me my Pagerduty events
     print 'Pagerduty:'
