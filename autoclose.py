@@ -30,7 +30,7 @@ class Zenoss():
                    'tid': self.reqCount}
 
         self.reqCount += 1
-        print payload
+
         resp = self.session.post(url, data=json.dumps(payload), headers=headers)
 
         return resp.json()
@@ -42,7 +42,7 @@ class Zenoss():
 
         return self._request('close', [data])['result']
 
-    def get_events(self):
+    def get_active_events(self):
 
         # Defaults we may want to allow to be modified at some point
         data = dict(start = 0, limit = 20)
@@ -62,7 +62,7 @@ class Zenoss():
 
 class Pagerduty():
 
-    def get_events(self):
+    def get_resolved_events(self):
 
         url = 'https://' + pagerduty_domain + '.pagerduty.com/api/v1/incidents'
         payload = {'fields': 'incident_key',
@@ -81,10 +81,10 @@ def main():
 
     # Create a new zenoss object and fetch its events
     zenoss = Zenoss()
-    z = zenoss.get_events()
+    z = zenoss.get_active_events()
 
     pagerduty = Pagerduty()
-    p = pagerduty.get_events()
+    p = pagerduty.get_resolved_events()
 
     # Show me my Zenoss events
     print 'Zenoss'
@@ -95,6 +95,8 @@ def main():
     print 'Pagerduty:'
     for i in p['incidents']:
         print 'incident_key = %s' % (i['incident_key'])
+
+
 
 if __name__ == "__main__":
     main()
