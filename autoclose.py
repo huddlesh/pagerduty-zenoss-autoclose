@@ -30,23 +30,22 @@ class Zenoss():
                    'tid': self.reqCount}
 
         self.reqCount += 1
+        print payload
         resp = self.session.post(url, data=json.dumps(payload), headers=headers)
 
         return resp.json()
 
-    def close_events(self, Evids={}):
+    def close_events(self, evids=[]):
 
-        ids = dict()
+        # List of event ids to close
+        data = {'evids': evids}
 
-        return self._request('close', [ids])['result']
+        return self._request('close', [data])['result']
 
     def get_events(self):
 
         # Defaults we may want to allow to be modified at some point
-        data = dict(start=0,
-                    limit=20,
-                    sort='lastTime',
-                    dir='DESC')
+        data = dict(start = 0, limit = 20)
 
         # These query params give us severity of critical and error,
         # a state of New or Ack, and a prodState of Production
@@ -89,7 +88,6 @@ def main():
 
     # Show me my Zenoss events
     print 'Zenoss'
-    print z['events']
     for e in z['events']:
         print 'Evid = %s, Event State = %s, Device State: %s' % (e['evid'], e['eventState'], e['prodState'])
 
