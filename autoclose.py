@@ -58,7 +58,15 @@ class Zenoss():
                         'firstTime', 'lastTime', 'evid', 'device',
                         'prodState']
 
-        return self._request('query', [data])['result']
+        # Query zenoss
+        response = self._request('query', [data])['result']
+
+        # Build an array of evids to return
+        events = []
+        for i in response['events']:
+            events.append(i['evid'])
+
+        return events
 
 class Pagerduty():
 
@@ -74,29 +82,34 @@ class Pagerduty():
         headers = {'content-type': 'application/json',
                    'Authorization': 'Token token=' + pagerduty_token}
 
-        r = requests.get(url, data=json.dumps(payload), headers=headers);
-        return r.json()
+        # Query pagerduty and convert results to json
+        response = requests.get(url, data=json.dumps(payload), headers=headers);
+        response = response.json()
+
+        # Build an array of incident_keys to return
+        incidents = []
+        for i in response['incidents']:
+            incidents.append(i['incident_key'])
+
+        return incidents
 
 def main():
 
     # Create a new zenoss object and fetch its events
     zenoss = Zenoss()
-    z = zenoss.get_active_events()
+    zenoss_events = zenoss.get_active_events()
 
     pagerduty = Pagerduty()
-    p = pagerduty.get_resolved_events()
+    pagerduty_events = pagerduty.get_resolved_events()
 
-    # Show me my Zenoss events
-    print 'Zenoss'
-    for e in z['events']:
-        print 'Evid = %s, Event State = %s, Device State: %s' % (e['evid'], e['eventState'], e['prodState'])
+    # Compare the two sets and see if we have any ids in common
+    zenoss_events = set(zenoss_events)
+    evids = zenoss_events.intersection(pagerduty_events)
 
-    # Show me my Pagerduty events
-    print 'Pagerduty:'
-    for i in p['incidents']:
-        print 'incident_key = %s' % (i['incident_key'])
-
-
+    # If we have any matches someone has resoloved the event(s)
+    # in pagerduty so lets close them in zenoss
+    if not evids:
+        zenoss.close_events(list(evids))
 
 if __name__ == "__main__":
     main()
