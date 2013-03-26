@@ -102,18 +102,21 @@ def main():
     zenoss = Zenoss()
     zenoss_events = zenoss.get_active_events()
 
-    pagerduty = Pagerduty()
-    pagerduty_events = pagerduty.get_resolved_events()
+    # If we have active events lets see if we have resolved them
+    # in pagerduty...otherwise we are finished here and there is
+    # no need to bother the pagerduty folks
+    if zenoss_events:
+        pagerduty = Pagerduty()
+        pagerduty_events = pagerduty.get_resolved_events()
 
-    # Compare the two sets and see if we have any ids in common
-    zenoss_events = set(zenoss_events)
-    evids = list(zenoss_events.intersection(pagerduty_events))
+        # Compare the two sets and see if we have any ids in common
+        zenoss_events = set(zenoss_events)
+        evids = list(zenoss_events.intersection(pagerduty_events))
 
-    # If we have any matches someone has resoloved the event(s)
-    # in pagerduty so lets close them in zenoss
-    if evids:
-        zenoss.close_events(evids)
-
+        # If we have any matches someone has resoloved the event(s)
+        # in pagerduty so lets close them in zenoss
+        if evids:
+            zenoss.close_events(evids)
 
 if __name__ == "__main__":
     main()
