@@ -3,6 +3,8 @@ import requests
 from optparse import OptionParser
 from config import zenoss_location, zenoss_user, zenoss_password, pagerduty_domain, pagerduty_service, pagerduty_token
 
+ROUTERS = { 'EventsRouter': 'evconsole'}
+
 class Zenoss():
 
     def __init__(self):
@@ -21,7 +23,7 @@ class Zenoss():
 
     def _request(self, router, method, data=[]):
 
-        url = zenoss_location + '/zport/dmd/evconsole_router'
+        url = zenoss_location + '/zport/dmd/' + ROUTERS[router] + '_router'
         headers = {'content-type': 'application/json; charset=utf-8'}
         payload = {'action': router,
                    'method': method,
@@ -29,6 +31,7 @@ class Zenoss():
                    'type': 'rpc',
                    'tid': self.reqCount}
 
+        # Increment our call counter
         self.reqCount += 1
 
         resp = self.session.post(url, data=json.dumps(payload), headers=headers)
@@ -104,12 +107,12 @@ def main():
 
     # Compare the two sets and see if we have any ids in common
     zenoss_events = set(zenoss_events)
-    evids = zenoss_events.intersection(pagerduty_events)
+    evids = list(zenoss_events.intersection(pagerduty_events))
 
     # If we have any matches someone has resoloved the event(s)
     # in pagerduty so lets close them in zenoss
     if evids:
-        zenoss.close_events(list(evids))
+        zenoss.close_events(evids)
 
 
 if __name__ == "__main__":
