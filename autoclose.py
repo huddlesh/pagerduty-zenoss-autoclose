@@ -17,13 +17,6 @@ else:
     pagerduty_domain = config.get('pagerduty','domain')
     pagerduty_service = config.get('pagerduty','service')
     pagerduty_token = config.get('pagerduty','token')
-    print zenoss_location
-    print zenoss_user
-    print zenoss_password
-    print pagerduty_domain
-    print pagerduty_service
-    print pagerduty_token
-    exit()
 
 ROUTERS = { 'EventsRouter': 'evconsole'}
 
