@@ -1,0 +1,14 @@
+# Configuration variables for pagerduty-zenoss-autoclear
+# Rename this file to config
+
+# Zenoss variables
+[zenoss]
+location = ''
+user = ''
+password = ''
+
+# Pagerduty variables
+[pagerduty]
+domain = ''
+service = ''
+token = ''
