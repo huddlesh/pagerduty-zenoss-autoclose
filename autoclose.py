@@ -1,7 +1,29 @@
-import json
-import requests
+import json, os, requests, ConfigParser
 from optparse import OptionParser
-from config import zenoss_location, zenoss_user, zenoss_password, pagerduty_domain, pagerduty_service, pagerduty_token
+
+# Look for our config file
+config_file = os.path.dirname(os.path.realpath(__file__)) + '/config'
+
+# If we cant find the config bail out otherwise load our credentials
+if (not os.path.isfile(config_file)):
+    print "Config file does not exist. Exiting."
+    exit()
+else:
+    config = ConfigParser.ConfigParser()
+    config.read(config_file)
+    zenoss_location = config.get('zenoss','location')
+    zenoss_user = config.get('zenoss','user')
+    zenoss_password = config.get('zenoss','password')
+    pagerduty_domain = config.get('pagerduty','domain')
+    pagerduty_service = config.get('pagerduty','service')
+    pagerduty_token = config.get('pagerduty','token')
+    print zenoss_location
+    print zenoss_user
+    print zenoss_password
+    print pagerduty_domain
+    print pagerduty_service
+    print pagerduty_token
+    exit()
 
 ROUTERS = { 'EventsRouter': 'evconsole'}
 
