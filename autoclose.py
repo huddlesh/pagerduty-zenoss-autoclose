@@ -36,7 +36,7 @@ class Zenoss():
 
         resp = self.session.post(url, data=payload)
 
-    def _request(self, router, method, data=[]):
+    def __request(self, router, method, data=[]):
 
         url = zenoss_location + '/zport/dmd/' + ROUTERS[router] + '_router'
         headers = {'content-type': 'application/json; charset=utf-8'}
@@ -58,7 +58,7 @@ class Zenoss():
         # List of event ids to close
         data = {'evids': evids}
 
-        return self._request('EventsRouter', 'close', [data])['result']
+        return self.__request('EventsRouter', 'close', [data])['result']
 
     def get_active_events(self):
 
@@ -77,7 +77,7 @@ class Zenoss():
                         'prodState']
 
         # Query zenoss
-        response = self._request('EventsRouter', 'query', [data])['result']
+        response = self.__request('EventsRouter', 'query', [data])['result']
 
         # Build an array of evids to return
         events = []
